@@ -20,8 +20,6 @@
       --panel:  rgba(255, 248, 240, 0.95);
     }
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    
-    /* FIX 1: Body background set to transparent so the AR camera feed is visible behind it */
     html, body { height:100%; font-family:'Nunito',sans-serif; background:transparent; overflow:hidden; color:var(--text); }
 
     /* ══════════════════════════════════════════
@@ -29,7 +27,7 @@
     ══════════════════════════════════════════ */
     #welcome-screen {
       position:fixed; inset:0; z-index:2000;
-      background:var(--bg); /* Keeps the solid background only on the welcome screen */
+      background:var(--bg);
       display:flex; flex-direction:column; align-items:center;
       overflow-y:auto; -webkit-overflow-scrolling:touch;
       padding: clamp(20px,5vw,36px) clamp(16px,4vw,24px) clamp(24px,6vw,40px);
@@ -127,7 +125,7 @@
     .help-close:active { transform:translateY(4px); box-shadow: 0 0 0 #1d4ed8; }
 
     /* ══════════════════════════════════════════
-       GAME HUD
+       GAME HUD & CONTROLS
     ══════════════════════════════════════════ */
     #progress-bar {
       position:fixed; top:0; left:0; right:0;
@@ -143,23 +141,20 @@
     .dot.active { background:var(--blue);    transform:scale(1.2); }
     #score-display { color:#d97706; font-size:clamp(12px,3.2vw,14px); font-weight:900; }
 
-    #menu-btn {
-      position:fixed; top:clamp(44px,12vw,54px); right:clamp(10px,3vw,14px); z-index:999;
+    /* Unified Top Controls (Back, Sound, Help) */
+    #top-controls {
+      position:fixed; top:clamp(44px,12vw,54px); left:clamp(10px,3vw,14px); right:clamp(10px,3vw,14px);
+      z-index:999; display:flex; justify-content:space-between; pointer-events:none;
+    }
+    .top-btn {
       background:#fff; border:2px solid #cbd5e1;
       color:var(--navy); border-radius:12px; padding:7px clamp(10px,3vw,13px);
       font-size:clamp(11px,3vw,13px); font-weight:900; cursor:pointer;
       font-family:'Nunito',sans-serif; display:flex; align-items:center; gap:5px;
-      box-shadow: 0 4px 0 #cbd5e1; transition:all .1s;
+      box-shadow: 0 4px 0 #cbd5e1; transition:all .1s; pointer-events:all; height: clamp(36px,9vw,40px);
     }
-    #menu-btn:active { transform:translateY(4px); box-shadow: 0 0 0 #cbd5e1; }
-    
-    #sound-btn {
-      position:fixed; top:clamp(44px,12vw,54px); left:clamp(10px,3vw,14px); z-index:999;
-      background:#fff; border:2px solid #cbd5e1;
-      color:var(--navy); border-radius:50%; width:clamp(36px,9vw,40px); height:clamp(36px,9vw,40px);
-      font-size:clamp(15px,4vw,17px); cursor:pointer; box-shadow: 0 4px 0 #cbd5e1; transition:all .1s;
-    }
-    #sound-btn:active { transform:translateY(4px); box-shadow: 0 0 0 #cbd5e1; }
+    .top-btn:active { transform:translateY(4px); box-shadow: 0 0 0 #cbd5e1; }
+    #sound-btn { border-radius: 50%; padding: 0; width: clamp(36px,9vw,40px); justify-content:center; font-size:clamp(15px,4vw,17px); }
 
     #status-bar {
       position:fixed; top:clamp(52px,14vw,64px); left:50%; transform:translateX(-50%);
@@ -268,7 +263,7 @@
     ══════════════════════════════════════════ */
     #all-done {
       position:fixed; inset:0; z-index:1001;
-      background:var(--bg); /* Explicit background to cover screen */
+      background:var(--bg);
       display:flex; flex-direction:column; align-items:center; overflow-y:auto;
       -webkit-overflow-scrolling:touch;
       opacity:0; pointer-events:none; transition:opacity .4s;
@@ -330,14 +325,11 @@
       letter-spacing:.5px; text-transform:uppercase;
       margin-bottom:clamp(12px,3vw,16px); text-align:center;
     }
-    
-    /* FIX 2: Switched from canvas to simple img tag for rendering */
     #marker-img {
       max-width:min(80vmin,360px); max-height:min(80vmin,360px);
       width:100%; height:auto; image-rendering:pixelated;
       border: 4px solid var(--navy); border-radius: 8px;
     }
-    
     .marker-modal-note {
       margin-top:clamp(14px,4vw,20px); color:var(--text);
       font-family:'Nunito',sans-serif; font-size:clamp(11px,3vw,12px); font-weight:900;
@@ -457,9 +449,15 @@
   <div id="score-display">⭐ 0</div>
 </div>
 
+<div id="top-controls" style="display:none">
+  <div style="display:flex; gap:8px;">
+    <button class="top-btn" id="back-cam-btn" onclick="goToMenu()">← Back</button>
+    <button class="top-btn" id="sound-btn" onclick="speakCurrentWord()">🔊</button>
+  </div>
+  <button class="top-btn" id="menu-btn" onclick="showHelp()">❓ Help</button>
+</div>
+
 <div id="status-bar"  style="display:none">Point your camera at both markers</div>
-<button id="sound-btn" style="display:none" onclick="speakCurrentWord()">🔊</button>
-<button id="menu-btn"  style="display:none" onclick="showHelp()">❓ Help</button>
 
 <div id="word-popup" style="display:none">
   <span id="word-emoji">🐑</span>
@@ -636,8 +634,7 @@
     // Hide game HUD
     document.getElementById('progress-bar').style.display  = 'none';
     document.getElementById('status-bar').style.display    = 'none';
-    document.getElementById('sound-btn').style.display     = 'none';
-    document.getElementById('menu-btn').style.display      = 'none';
+    document.getElementById('top-controls').style.display  = 'none';
     document.getElementById('word-popup').style.display    = 'none';
     document.getElementById('pill-area').style.display     = 'none';
 
@@ -654,8 +651,7 @@
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('progress-bar').style.display   = 'flex';
     document.getElementById('status-bar').style.display     = 'block';
-    document.getElementById('sound-btn').style.display      = 'block';
-    document.getElementById('menu-btn').style.display       = 'flex';
+    document.getElementById('top-controls').style.display   = 'flex';
     document.getElementById('word-popup').style.display     = 'block';
     document.getElementById('pill-area').style.display      = 'flex';
 
@@ -884,7 +880,7 @@
     speakWord(currentWordSet[Math.min(round,currentWordSet.length-1)].speak, 0.82);
   }
 
-  // ── FIX 2: Marker viewer switched to simple img tags ─────────────
+  // ── FIX: Stable Image Hosting URLs ─────────────
   function showMarker(type) {
     const modal = document.getElementById('marker-modal');
     const label = document.getElementById('marker-modal-label');
@@ -892,10 +888,10 @@
 
     if (type === 'hiro') {
       label.textContent = 'MARKER 1 — HIRO (consonant / orange block)';
-      imgEl.src = 'https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png';
+      imgEl.src = 'https://jeromeetienne.github.io/AR.js/data/images/hiro.png';
     } else {
       label.textContent = 'MARKER 2 — KANJI (vowel / blue block)';
-      imgEl.src = 'https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png';
+      imgEl.src = 'https://jeromeetienne.github.io/AR.js/data/images/kanji.png';
     }
 
     modal.style.display = 'flex';
