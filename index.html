@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AR Phoneme Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Nunito',sans-serif; background:#0f172a; overflow:hidden; }
+
+    /* ════════════════════════════════════════
+       WELCOME / MENU SCREEN
+    ════════════════════════════════════════ */
+    #welcome-screen {
+      position:fixed; inset:0; z-index:2000;
+      background:linear-gradient(160deg,#0f172a 0%,#1e3a5f 60%,#0f172a 100%);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:flex-start;
+      overflow-y:auto; padding:32px 24px 40px;
+    }
+    .welcome-logo  { font-size:56px; margin-bottom:6px; }
+    .welcome-title { font-size:26px; font-weight:900; color:#fff; text-align:center; letter-spacing:1px; margin-bottom:4px; }
+    .welcome-sub   { font-size:13px; color:#93c5fd; text-align:center; margin-bottom:28px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+
+    .section-label {
+      font-size:12px; font-weight:900; color:#64748b;
+      letter-spacing:1.5px; text-transform:uppercase;
+      align-self:flex-start; margin-bottom:10px;
+      width:100%; max-width:360px;
+    }
+
+    /* Difficulty */
+    .difficulty-row { display:flex; gap:10px; margin-bottom:24px; width:100%; max-width:360px; }
+    .diff-btn {
+      flex:1; padding:12px 6px; border-radius:14px;
+      border:2px solid transparent; background:rgba(255,255,255,.06);
+      color:#94a3b8; font-family:'Nunito',sans-serif;
+      font-size:13px; font-weight:700; cursor:pointer;
+      transition:all .2s; text-align:center;
+    }
+    .diff-btn .diff-icon { font-size:22px; display:block; margin-bottom:4px; }
+    .diff-btn.selected { background:rgba(59,130,246,.18); border-color:#3b82f6; color:#fff; }
+
+    /* How to play */
+    .how-to-play {
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:18px; padding:20px;
+      width:100%; max-width:360px; margin-bottom:24px;
+    }
+    .htp-title { font-size:14px; font-weight:900; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .htp-step  { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+    .htp-step:last-child { margin-bottom:0; }
+    .step-num  {
+      width:26px; height:26px; border-radius:50%;
+      background:#1d4ed8; color:#fff;
+      font-size:13px; font-weight:900;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0; margin-top:1px;
+    }
+    .step-text { font-size:13px; color:#cbd5e1; line-height:1.5; }
+    .step-text strong { color:#fff; }
+
+    /* Marker preview */
+    .marker-preview { display:flex; gap:12px; width:100%; max-width:360px; margin-bottom:28px; }
+    .marker-card {
+      flex:1; background:rgba(255,255,255,.06);
+      border-radius:14px; padding:14px 10px;
+      text-align:center; border:1px solid rgba(255,255,255,.1);
+    }
+    .marker-card .mc-label { font-size:11px; font-weight:900; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+    .marker-card .mc-pill  { display:inline-block; padding:6px 16px; border-radius:20px; font-size:17px; font-weight:900; margin-bottom:6px; }
+    .mc-pill.consonant { background:#ffedd5; color:#c2410c; }
+    .mc-pill.vowel     { background:#dbeafe; color:#1e40af; }
+    .marker-card .mc-name  { font-size:11px; color:#64748b; font-weight:700; }
+
+    .start-btn {
+      width:100%; max-width:360px;
+      background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+      color:#fff; border:none; border-radius:18px;
+      padding:18px; font-size:18px; font-weight:900;
+      cursor:pointer; font-family:'Nunito',sans-serif;
+      box-shadow:0 6px 24px rgba(59,130,246,.4);
+      transition:transform .15s, box-shadow .15s; letter-spacing:.5px;
+    }
+    .start-btn:active { transform:scale(.97); box-shadow:none; }
+
+    .print-note { font-size:12px; color:#475569; text-align:center; margin-top:14px; max-width:320px; line-height:1.6; }
+    .print-note a { color:#60a5fa; }
+
+    /* ════════════════════════════════════════
+       HELP MODAL
+    ════════════════════════════════════════ */
+    #help-modal {
+      position:fixed; inset:0; z-index:1500;
+      background:rgba(0,0,0,.75);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; pointer-events:none; transition:opacity .3s; padding:24px;
+    }
+    #help-modal.visible { opacity:1; pointer-events:all; }
+    .help-card {
+      background:#1e293b; border-radius:20px; padding:24px;
+      max-width:340px; width:100%; border:1px solid rgba(255,255,255,.1);
+    }
+    .help-card h2 { color:#fff; font-size:18px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .help-card .htp-step { margin-bottom:12px; }
+    .help-close {
+      width:100%; margin-top:18px; background:#3b82f6; color:#fff;
+      border:none; border-radius:12px; padding:12px; font-size:15px;
+      font-weight:900; cursor:pointer; font-family:'Nunito',sans-serif;
+    }
+
+    /* ════════════════════════════════════════
+       GAME HUD
+    ════════════════════════════════════════ */
+    #progress-bar {
+      position:fixed; top:0; left:0; right:0;
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(15,23,42,.92); padding:10px 16px;
+      z-index:999; backdrop-filter:blur(6px);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    #round-label    { color:#fff; font-size:13px; font-weight:700; }
+    .progress-dots  { display:flex; gap:6px; }
+    .dot { width:11px; height:11px; border-radius:50%; background:rgba(255,255,255,.2); transition:all .3s; }
+    .dot.done   { background:#4ade80; transform:scale(1.1); }
+    .dot.active { background:#fff;    transform:scale(1.2); }
+    #score-display  { color:#fcd34d; font-size:14px; font-weight:900; }
+
+    #menu-btn {
+      position:fixed; top:54px; right:14px; z-index:999;
+      background:rgba(15,23,42,.85); border:1px solid rgba(255,255,255,.12);
+      color:#fff; border-radius:12px; padding:7px 13px;
+      font-size:13px; font-weight:700; cursor:pointer;
+      font-family:'Nunito',sans-serif; display:flex; align-items:center; gap:6px;
+    }
+
+    #status-bar {
+      position:fixed; top:58px; left:50%; transform:translateX(-50%);
+      background:rgba(15,23,42,.75); color:#fff;
+      padding:8px 20px; border-radius:24px;
+      font-size:13px; font-weight:700; z-index:998;
+      text-align:center; max-width:76vw; line-height:1.4;
+      backdrop-filter:blur(4px); transition:background .3s; pointer-events:none;
+    }
+    #status-bar.wrong { background:rgba(239,68,68,.75); animation:shakeBar .4s ease; }
+    @keyframes shakeBar {
+      0%,100%{ transform:translateX(-50%); }
+      20%    { transform:translateX(calc(-50% - 8px)); }
+      60%    { transform:translateX(calc(-50% + 8px)); }
+    }
+
+    /* ── Marker pills + tap hint ── */
+    #pill-area {
+      position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      z-index:999;
+    }
+    #marker-indicators { display:flex; gap:12px; }
+
+    .marker-pill {
+      padding:10px 24px; border-radius:24px;
+      font-size:19px; font-weight:900; letter-spacing:1.5px;
+      border:3px solid transparent; transition:all .25s;
+      cursor:pointer; user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      position:relative;
+    }
+    .marker-pill.consonant { background:#ffedd5; color:#c2410c; border-color:#fdba74; }
+    .marker-pill.vowel     { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+
+    .marker-pill.active.consonant {
+      background:#f97316; color:#fff; border-color:#c2410c;
+      transform:scale(1.12); box-shadow:0 4px 18px rgba(249,115,22,.5);
+    }
+    .marker-pill.active.vowel {
+      background:#3b82f6; color:#fff; border-color:#1d4ed8;
+      transform:scale(1.12); box-shadow:0 4px 18px rgba(59,130,246,.5);
+    }
+    .marker-pill.hint { animation:hintPulse 1.1s ease-in-out infinite; }
+    @keyframes hintPulse {
+      0%,100%{ box-shadow:0 0 0 0 rgba(250,204,21,.7); }
+      50%    { box-shadow:0 0 0 10px rgba(250,204,21,0); }
+    }
+    .marker-pill.wrong-flash { animation:wrongFlash .4s ease; }
+    @keyframes wrongFlash {
+      0%,100%{ transform:scale(1.12) translateX(0); }
+      25%    { transform:scale(1.12) translateX(-5px); }
+      75%    { transform:scale(1.12) translateX(5px); }
+    }
+
+    /* Tap-to-hear pill feedback */
+    .marker-pill.speaking { animation:speakPop .3s ease; }
+    @keyframes speakPop {
+      0%  { transform:scale(1); }
+      50% { transform:scale(1.18); }
+      100%{ transform:scale(1); }
+    }
+
+    /* Tap hint label */
+    #tap-hint {
+      font-size:11px; color:rgba(255,255,255,.35);
+      font-weight:700; letter-spacing:.5px; text-align:center;
+    }
+
+    /* Word popup */
+    #word-popup {
+      position:fixed; bottom:106px; left:50%;
+      transform:translateX(-50%) scale(0);
+      background:#fff; border-radius:24px;
+      padding:20px 38px; text-align:center;
+      box-shadow:0 12px 40px rgba(0,0,0,.25);
+      transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+      min-width:200px; z-index:999; pointer-events:none;
+    }
+    #word-popup.visible      { transform:translateX(-50%) scale(1); }
+    #word-popup.wrong-popup  { background:#fff5f5; transform:translateX(-50%) scale(1); animation:popupShake .4s ease; }
+    @keyframes popupShake {
+      0%,100%{ transform:translateX(-50%) scale(1) rotate(0deg); }
+      25%    { transform:translateX(-50%) scale(1) rotate(-2deg); }
+      75%    { transform:translateX(-50%) scale(1) rotate(2deg); }
+    }
+    #word-emoji    { font-size:60px; display:block; margin-bottom:6px; }
+    #word-text     { font-size:30px; font-weight:900; color:#1A3C6E; letter-spacing:3px; display:block; margin-bottom:4px; }
+    #word-phonemes { font-size:14px; color:#2E6DA4; font-weight:700; }
+    #wrong-msg     { font-size:13px; color:#ef4444; font-weight:700; margin-top:6px; display:none; }
+
+    #sound-btn {
+      position:fixed; top:54px; left:14px; z-index:999;
+      background:rgba(15,23,42,.85); border:1px solid rgba(255,255,255,.12);
+      color:#fff; border-radius:50%; width:40px; height:40px;
+      font-size:17px; cursor:pointer;
+    }
+
+    /* ════════════════════════════════════════
+       ROUND COMPLETE
+    ════════════════════════════════════════ */
+    #round-complete {
+      position:fixed; inset:0;
+      background:rgba(15,23,42,.9);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      z-index:1000; opacity:0; pointer-events:none; transition:opacity .35s; padding:24px;
+    }
+    #round-complete.visible { opacity:1; pointer-events:all; }
+    #rc-emoji    { font-size:88px; margin-bottom:10px; }
+    #rc-word     { font-size:38px; font-weight:900; color:#fff; letter-spacing:3px; margin-bottom:6px; }
+    #rc-sub      { font-size:15px; color:#93c5fd; margin-bottom:8px; }
+    #rc-attempts { font-size:13px; color:#64748b; margin-bottom:28px; }
+    #next-btn    {
+      background:#4ade80; color:#14532d; border:none; border-radius:18px;
+      padding:14px 44px; font-size:17px; font-weight:900;
+      cursor:pointer; font-family:'Nunito',sans-serif;
+      box-shadow:0 4px 18px rgba(74,222,128,.35);
+    }
+
+    /* ════════════════════════════════════════
+       SESSION SUMMARY
+    ════════════════════════════════════════ */
+    #all-done {
+      position:fixed; inset:0; z-index:1001;
+      background:linear-gradient(160deg,#0f172a,#1e3a5f);
+      display:flex; flex-direction:column; align-items:center; overflow-y:auto;
+      opacity:0; pointer-events:none; transition:opacity .4s; padding:32px 24px 40px;
+    }
+    #all-done.visible { opacity:1; pointer-events:all; }
+    .summary-title { font-size:28px; font-weight:900; color:#fff; margin-bottom:4px; }
+    .summary-sub   { font-size:14px; color:#64748b; margin-bottom:6px; }
+    .summary-score { font-size:18px; color:#fcd34d; font-weight:900; margin-bottom:24px; }
+    .chart-wrap {
+      background:rgba(255,255,255,.05); border-radius:18px;
+      padding:20px; width:100%; max-width:360px; margin-bottom:20px;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .chart-label { font-size:12px; font-weight:900; color:#64748b; letter-spacing:1px; text-transform:uppercase; margin-bottom:14px; }
+    .word-result-list { width:100%; max-width:360px; margin-bottom:24px; }
+    .word-result {
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(255,255,255,.05); border-radius:12px;
+      padding:12px 16px; margin-bottom:8px;
+      border:1px solid rgba(255,255,255,.07);
+    }
+    .wr-word     { font-size:16px; font-weight:900; color:#fff; }
+    .wr-phonemes { font-size:12px; color:#64748b; font-weight:700; }
+    .wr-badge    { font-size:12px; font-weight:900; padding:4px 12px; border-radius:20px; }
+    .wr-badge.fast { background:#dcfce7; color:#15803d; }
+    .wr-badge.ok   { background:#fef9c3; color:#a16207; }
+    .wr-badge.slow { background:#fee2e2; color:#b91c1c; }
+    #restart-btn {
+      width:100%; max-width:360px;
+      background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+      color:#fff; border:none; border-radius:18px;
+      padding:16px; font-size:17px; font-weight:900;
+      cursor:pointer; font-family:'Nunito',sans-serif;
+      box-shadow:0 6px 24px rgba(59,130,246,.35);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ AR SCENE ══════════════════════════════════════════════════════════ -->
+<a-scene
+  embedded
+  arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono_and_matrix; matrixCodeType:3x3;"
+  renderer="logarithmicDepthBuffer:true; antialias:true;"
+  vr-mode-ui="enabled:false"
+>
+  <a-marker preset="hiro" id="marker-hiro">
+    <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#f97316" opacity="0.93"></a-box>
+    <a-text id="text-hiro" value="SH" align="center" position="0 1.25 0"
+            scale="3 3 3" color="white"
+            font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+  </a-marker>
+  <a-marker preset="kanji" id="marker-kanji">
+    <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#3b82f6" opacity="0.93"></a-box>
+    <a-text id="text-kanji" value="EE" align="center" position="0 1.25 0"
+            scale="3 3 3" color="white"
+            font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
+  </a-marker>
+  <a-entity camera></a-entity>
+</a-scene>
+
+<!-- ══ WELCOME SCREEN ════════════════════════════════════════════════════ -->
+<div id="welcome-screen">
+  <div class="welcome-logo">🧩</div>
+  <div class="welcome-title">AR Phoneme Builder</div>
+  <div class="welcome-sub">A Neurodiversity Research Prototype</div>
+
+  <div class="section-label">Choose Difficulty</div>
+  <div class="difficulty-row">
+    <button class="diff-btn selected" id="diff-easy" onclick="selectDiff('easy')">
+      <span class="diff-icon">🌱</span>Easy
+      <span style="font-size:10px;color:#64748b;display:block">Hints on</span>
+    </button>
+    <button class="diff-btn" id="diff-medium" onclick="selectDiff('medium')">
+      <span class="diff-icon">🔥</span>Medium
+      <span style="font-size:10px;color:#64748b;display:block">No hints</span>
+    </button>
+    <button class="diff-btn" id="diff-hard" onclick="selectDiff('hard')">
+      <span class="diff-icon">⚡</span>Hard
+      <span style="font-size:10px;color:#64748b;display:block">3 phonemes</span>
+    </button>
+  </div>
+
+  <div class="section-label">How to Play</div>
+  <div class="how-to-play">
+    <div class="htp-title">📋 Instructions</div>
+    <div class="htp-step">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Get your two markers</strong> — print the Hiro and Kanji markers, or open them fullscreen on a second screen. Links are at the bottom.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Allow camera access</strong> when prompted. The AR only works with your camera on.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Point your camera at both markers</strong> at the same time to blend the phonemes into a word.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">4</div>
+      <div class="step-text"><strong>Tap the phoneme pills</strong> at the bottom of the screen to hear each sound played aloud before you look for the marker.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">5</div>
+      <div class="step-text"><strong>On Hard mode</strong>, a third phoneme is shown. You need to blend all three sounds to complete the word.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Your Markers</div>
+  <div class="marker-preview">
+    <div class="marker-card">
+      <div class="mc-label">Hiro Marker</div>
+      <div class="mc-pill consonant">SH</div>
+      <div class="mc-name">Consonant block<br>Orange in AR</div>
+    </div>
+    <div class="marker-card">
+      <div class="mc-label">Kanji Marker</div>
+      <div class="mc-pill vowel">EE</div>
+      <div class="mc-name">Vowel block<br>Blue in AR</div>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startGame()">Start Session →</button>
+  <div class="print-note">
+    Open your markers fullscreen on another screen:<br>
+    <a href="#" onclick="showMarker('hiro');return false;">Hiro marker (orange block)</a>
+    &nbsp;·&nbsp;
+    <a href="#" onclick="showMarker('kanji');return false;">Kanji marker (blue block)</a>
+  </div>
+</div>
+
+<!-- ══ GAME HUD ═══════════════════════════════════════════════════════════ -->
+<div id="progress-bar" style="display:none">
+  <div id="round-label">Round 1 of 5</div>
+  <div class="progress-dots">
+    <div class="dot active" id="dot-0"></div>
+    <div class="dot" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+    <div class="dot" id="dot-4"></div>
+  </div>
+  <div id="score-display">⭐ 0</div>
+</div>
+
+<div id="status-bar"  style="display:none">Point your camera at both markers</div>
+<button id="sound-btn" style="display:none" onclick="speakCurrentWord()">🔊</button>
+<button id="menu-btn"  style="display:none" onclick="showHelp()">❓ Help</button>
+
+<div id="word-popup" style="display:none">
+  <span id="word-emoji">🐑</span>
+  <span id="word-text">SHEEP</span>
+  <span id="word-phonemes">SH + EE</span>
+  <div id="wrong-msg">Not quite — try again!</div>
+</div>
+
+<!-- Pill area — tappable pills + tap hint label -->
+<div id="pill-area" style="display:none">
+  <div id="marker-indicators">
+    <div class="marker-pill consonant hint" id="pill-left"
+         onclick="previewPhoneme('left')"
+         role="button" aria-label="Tap to hear this phoneme">SH</div>
+    <div class="marker-pill vowel hint"     id="pill-right"
+         onclick="previewPhoneme('right')"
+         role="button" aria-label="Tap to hear this phoneme">EE</div>
+  </div>
+  <div id="tap-hint">tap a pill to hear the sound</div>
+</div>
+
+<!-- ══ HELP MODAL ════════════════════════════════════════════════════════ -->
+<div id="help-modal">
+  <div class="help-card">
+    <h2>❓ How to Play</h2>
+    <div class="htp-step">
+      <div class="step-num">1</div>
+      <div class="step-text">Point your camera at <strong>both printed markers</strong> at the same time.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">2</div>
+      <div class="step-text">The <strong>orange block</strong> is the consonant. The <strong>blue block</strong> is the vowel. Check the pills at the bottom to see which phonemes you need.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Tap either pill</strong> to hear the phoneme spoken aloud before you look for the marker.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">4</div>
+      <div class="step-text">When both markers are in frame together, the word <strong>appears and is spoken aloud</strong>. Tap 🔊 to hear it again.</div>
+    </div>
+    <div class="htp-step">
+      <div class="step-num">5</div>
+      <div class="step-text">Wrong combinations give a <strong>gentle redirect</strong> — no buzzer, just a nudge.</div>
+    </div>
+    <button class="help-close" onclick="closeHelp()">Got it</button>
+  </div>
+</div>
+
+<!-- ══ ROUND COMPLETE ═════════════════════════════════════════════════════ -->
+<div id="round-complete">
+  <div id="rc-emoji">🐑</div>
+  <div id="rc-word">SHEEP</div>
+  <div id="rc-sub">SH + EE — great blending!</div>
+  <div id="rc-attempts"></div>
+  <button id="next-btn" onclick="nextRound()">Next Word →</button>
+</div>
+
+<!-- ══ SESSION SUMMARY ════════════════════════════════════════════════════ -->
+<div id="all-done">
+  <div style="font-size:64px;margin-bottom:10px">🎉</div>
+  <div class="summary-title">Session Complete!</div>
+  <div class="summary-sub">Here's how you did</div>
+  <div class="summary-score" id="ad-score">5 words · ⭐ 0</div>
+  <div class="chart-wrap">
+    <div class="chart-label">Attempts per Word</div>
+    <canvas id="attempts-chart" height="160"></canvas>
+  </div>
+  <div class="section-label" style="max-width:360px;width:100%;margin-bottom:12px">Word Breakdown</div>
+  <div class="word-result-list" id="word-result-list"></div>
+  <button id="restart-btn" onclick="restartGame()">Play Again</button>
+</div>
+
+<!-- ══ SCRIPT ═════════════════════════════════════════════════════════════ -->
+<script>
+  // ── Word sets ─────────────────────────────────────────────────────────────
+  const WORDS_EASY = [
+    { left:'SH', right:'EE',  word:'SHEEP', emoji:'🐑', speak:'sheep', hint:true  },
+    { left:'SH', right:'OO',  word:'SHOE',  emoji:'👟', speak:'shoe',  hint:true  },
+    { left:'B',  right:'EE',  word:'BEE',   emoji:'🐝', speak:'bee',   hint:true  },
+    { left:'T',  right:'EE',  word:'TEA',   emoji:'🍵', speak:'tea',   hint:false },
+    { left:'K',  right:'EE',  word:'KEY',   emoji:'🔑', speak:'key',   hint:false },
+  ];
+  const WORDS_MEDIUM = [
+    { left:'SH', right:'EE',  word:'SHEEP', emoji:'🐑', speak:'sheep', hint:false },
+    { left:'B',  right:'OO',  word:'BOOK',  emoji:'📚', speak:'book',  hint:false },
+    { left:'R',  right:'AIN', word:'RAIN',  emoji:'🌧️', speak:'rain',  hint:false },
+    { left:'T',  right:'REE', word:'TREE',  emoji:'🌲', speak:'tree',  hint:false },
+    { left:'K',  right:'AT',  word:'CAT',   emoji:'🐱', speak:'cat',   hint:false },
+  ];
+  const WORDS_HARD = [
+    { left:'SH', right:'EE', coda:'P', word:'SHEEP', emoji:'🐑', speak:'sheep', hint:false },
+    { left:'B',  right:'OO', coda:'K', word:'BOOK',  emoji:'📚', speak:'book',  hint:false },
+    { left:'R',  right:'AI', coda:'N', word:'RAIN',  emoji:'🌧️', speak:'rain',  hint:false },
+    { left:'D',  right:'O',  coda:'G', word:'DOG',   emoji:'🐶', speak:'dog',   hint:false },
+    { left:'F',  right:'I',  coda:'SH',word:'FISH',  emoji:'🐟', speak:'fish',  hint:false },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentWordSet   = WORDS_EASY;
+  let selectedDiff     = 'easy';
+  let round            = 0;
+  let score            = 0;
+  let hiroSeen         = false;
+  let kanjiSeen        = false;
+  let wordShowing      = false;
+  let roundDone        = false;
+  let wrongCooldown    = false;
+  let speakTimer       = null;
+  let attemptCounts    = [];
+  let currentAttempts  = 0;
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const statusBar    = document.getElementById('status-bar');
+  const wordPopup    = document.getElementById('word-popup');
+  const pillLeft     = document.getElementById('pill-left');
+  const pillRight    = document.getElementById('pill-right');
+  const tapHint      = document.getElementById('tap-hint');
+  const roundLabel   = document.getElementById('round-label');
+  const scoreDisplay = document.getElementById('score-display');
+  const rcOverlay    = document.getElementById('round-complete');
+  const allDone      = document.getElementById('all-done');
+  const textHiro     = document.getElementById('text-hiro');
+  const textKanji    = document.getElementById('text-kanji');
+  const wrongMsg     = document.getElementById('wrong-msg');
+
+  // ── Difficulty ────────────────────────────────────────────────────────────
+  function selectDiff(d) {
+    selectedDiff = d;
+    ['easy','medium','hard'].forEach(x =>
+      document.getElementById('diff-'+x).classList.toggle('selected', x === d)
+    );
+  }
+
+  // ── Start ─────────────────────────────────────────────────────────────────
+  function startGame() {
+    currentWordSet = selectedDiff === 'hard'   ? WORDS_HARD
+                   : selectedDiff === 'medium' ? WORDS_MEDIUM
+                   : WORDS_EASY;
+
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('progress-bar').style.display   = 'flex';
+    document.getElementById('status-bar').style.display     = 'block';
+    document.getElementById('sound-btn').style.display      = 'block';
+    document.getElementById('menu-btn').style.display       = 'flex';
+    document.getElementById('word-popup').style.display     = 'block';
+    document.getElementById('pill-area').style.display      = 'flex';
+
+    for (let i = 0; i < 5; i++) {
+      document.getElementById('dot-'+i).className = 'dot'+(i===0?' active':'');
+    }
+    attemptCounts = [];
+    round = 0; score = 0;
+    scoreDisplay.textContent = '⭐ 0';
+    loadRound(0);
+  }
+
+  // ── Load round ────────────────────────────────────────────────────────────
+  function loadRound(idx) {
+    const w = currentWordSet[idx];
+    roundDone       = false;
+    hiroSeen        = false;
+    kanjiSeen       = false;
+    wordShowing     = false;
+    currentAttempts = 0;
+    wrongCooldown   = false;
+
+    textHiro.setAttribute('value',  w.left);
+    textKanji.setAttribute('value', w.right);
+
+    pillLeft.textContent  = w.left;
+    pillRight.textContent = w.right;
+    pillLeft.classList.remove('active','wrong-flash','speaking');
+    pillRight.classList.remove('active','wrong-flash','speaking');
+
+    if (w.hint) {
+      pillLeft.classList.add('hint');
+      pillRight.classList.add('hint');
+      tapHint.style.opacity = '1';
+    } else {
+      pillLeft.classList.remove('hint');
+      pillRight.classList.remove('hint');
+      tapHint.style.opacity = '.35';
+    }
+
+    wrongMsg.style.display = 'none';
+    wordPopup.classList.remove('visible','wrong-popup');
+
+    for (let i = 0; i < 5; i++) {
+      const d = document.getElementById('dot-'+i);
+      d.classList.remove('active','done');
+      if      (i < idx)  d.classList.add('done');
+      else if (i === idx) d.classList.add('active');
+    }
+    roundLabel.textContent = 'Round '+(idx+1)+' of 5';
+    statusBar.classList.remove('wrong');
+
+    if (w.hint) {
+      statusBar.textContent = '💡 Tap a pill to hear the sound, then find the markers';
+    } else if (selectedDiff === 'hard') {
+      statusBar.textContent = 'Blend '+w.left+' + '+w.right+' + '+w.coda;
+    } else {
+      statusBar.textContent = 'Find '+w.left+' and '+w.right+' — hold them together';
+    }
+  }
+
+  // ── Phoneme pill tap — preview audio ─────────────────────────────────────
+  // This is the core new feature: tap a pill to hear just that phoneme spoken
+  // aloud, independent of the AR detection. Gives the child an audio cue
+  // before they start searching for the physical marker.
+  function previewPhoneme(side) {
+    const w    = currentWordSet[round];
+    const pill = side === 'left' ? pillLeft : pillRight;
+    const text = side === 'left' ? w.left   : w.right;
+
+    // Visual pop feedback on the pill
+    pill.classList.remove('speaking');
+    void pill.offsetWidth; // force reflow to restart animation
+    pill.classList.add('speaking');
+    setTimeout(() => pill.classList.remove('speaking'), 350);
+
+    // Speak the phoneme slowly and clearly
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utt   = new SpeechSynthesisUtterance(text);
+    utt.rate    = 0.65;   // slower than normal so phoneme is distinct
+    utt.pitch   = 1.15;
+    utt.volume  = 1;
+    window.speechSynthesis.speak(utt);
+
+    // Subtle single haptic tap — different from correct (double) and wrong (long)
+    if ('vibrate' in navigator) navigator.vibrate(30);
+  }
+
+  // ── Marker detection ──────────────────────────────────────────────────────
+  function updateState() {
+    if (roundDone || wrongCooldown) return;
+    const w = currentWordSet[round];
+
+    pillLeft.classList.toggle('active',  hiroSeen);
+    pillRight.classList.toggle('active', kanjiSeen);
+
+    if (hiroSeen && kanjiSeen) {
+      if (!wordShowing) triggerWord();
+    } else {
+      hideWord();
+      if (hiroSeen  && !kanjiSeen) {
+        statusBar.textContent = '✅ '+w.left+' found — now find '+w.right;
+        statusBar.classList.remove('wrong');
+      } else if (kanjiSeen && !hiroSeen) {
+        statusBar.textContent = '✅ '+w.right+' found — now find '+w.left;
+        statusBar.classList.remove('wrong');
+      } else {
+        statusBar.classList.remove('wrong');
+        statusBar.textContent = w.hint
+          ? '💡 Tap a pill to hear the sound, then find the markers'
+          : selectedDiff === 'hard'
+            ? 'Blend '+w.left+' + '+w.right+' + '+w.coda
+            : 'Find '+w.left+' and '+w.right+' — hold them together';
+      }
+    }
+  }
+
+  // ── Correct trigger ───────────────────────────────────────────────────────
+  function triggerWord() {
+    wordShowing     = true;
+    roundDone       = true;
+    currentAttempts++;
+    const w = currentWordSet[round];
+
+    document.getElementById('word-emoji').textContent    = w.emoji;
+    document.getElementById('word-text').textContent     = w.word;
+    document.getElementById('word-phonemes').textContent = selectedDiff === 'hard'
+      ? w.left+' + '+w.right+' + '+w.coda
+      : w.left+' + '+w.right;
+    wrongMsg.style.display = 'none';
+    wordPopup.classList.add('visible');
+    wordPopup.classList.remove('wrong-popup');
+    statusBar.textContent = '🎉 '+w.word+'!';
+    statusBar.classList.remove('wrong');
+
+    score++;
+    scoreDisplay.textContent = '⭐ '+score;
+
+    // Double-pulse haptic = correct answer
+    if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
+
+    clearTimeout(speakTimer);
+    speakTimer = setTimeout(() => {
+      speakWord(w.speak);
+      setTimeout(() => showRoundComplete(w), 1800);
+    }, 350);
+  }
+
+  // ── Wrong feedback ────────────────────────────────────────────────────────
+  function triggerWrong() {
+    if (roundDone || wrongCooldown || !hiroSeen || !kanjiSeen) return;
+    wrongCooldown   = true;
+    currentAttempts++;
+
+    document.getElementById('word-emoji').textContent    = '🤔';
+    document.getElementById('word-text').textContent     = '...';
+    document.getElementById('word-phonemes').textContent = 'Try again';
+    wrongMsg.style.display  = 'block';
+    wrongMsg.textContent    = 'Not quite — keep looking!';
+
+    wordPopup.classList.add('visible','wrong-popup');
+    pillLeft.classList.add('wrong-flash');
+    pillRight.classList.add('wrong-flash');
+    statusBar.textContent = 'Almost — try holding them a bit closer';
+    statusBar.classList.add('wrong');
+
+    playNeutralChime();
+    if ('vibrate' in navigator) navigator.vibrate(60);
+
+    setTimeout(() => {
+      wrongCooldown = false;
+      wordPopup.classList.remove('visible','wrong-popup');
+      wrongMsg.style.display = 'none';
+      pillLeft.classList.remove('wrong-flash');
+      pillRight.classList.remove('wrong-flash');
+      statusBar.classList.remove('wrong');
+      updateState();
+    }, 1400);
+  }
+
+  function hideWord() {
+    wordShowing = false;
+    wordPopup.classList.remove('visible','wrong-popup');
+    wrongMsg.style.display = 'none';
+  }
+
+  // ── Round complete ────────────────────────────────────────────────────────
+  function showRoundComplete(w) {
+    attemptCounts.push(currentAttempts);
+    document.getElementById('rc-emoji').textContent    = w.emoji;
+    document.getElementById('rc-word').textContent     = w.word;
+    document.getElementById('rc-sub').textContent      = selectedDiff === 'hard'
+      ? w.left+' + '+w.right+' + '+w.coda+' — great blending!'
+      : w.left+' + '+w.right+' — great blending!';
+    document.getElementById('rc-attempts').textContent = currentAttempts === 1
+      ? 'First try! 🌟' : currentAttempts+' attempts';
+    rcOverlay.classList.add('visible');
+  }
+
+  function nextRound() {
+    rcOverlay.classList.remove('visible');
+    round++;
+    if (round >= currentWordSet.length) showSummary();
+    else loadRound(round);
+  }
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  function showSummary() {
+    const total = attemptCounts.reduce((a,b) => a+b, 0);
+    document.getElementById('ad-score').textContent =
+      '5 words · ⭐ '+score+'/5 · '+total+' total attempts';
+
+    const ctx = document.getElementById('attempts-chart').getContext('2d');
+    if (window._chart) window._chart.destroy();
+    window._chart = new Chart(ctx, {
+      type:'bar',
+      data:{
+        labels: currentWordSet.map(w => w.word),
+        datasets:[{
+          data: attemptCounts,
+          backgroundColor: attemptCounts.map(a =>
+            a===1 ? 'rgba(74,222,128,.8)' : a<=2 ? 'rgba(250,204,21,.8)' : 'rgba(248,113,113,.8)'
+          ),
+          borderRadius:8, borderSkipped:false,
+        }]
+      },
+      options:{
+        plugins:{ legend:{ display:false } },
+        scales:{
+          x:{ ticks:{ color:'#94a3b8', font:{ family:'Nunito', weight:'700' } }, grid:{ color:'rgba(255,255,255,.05)' } },
+          y:{ ticks:{ color:'#94a3b8', stepSize:1, font:{ family:'Nunito' } }, grid:{ color:'rgba(255,255,255,.07)' }, beginAtZero:true }
+        }
+      }
+    });
+
+    const list = document.getElementById('word-result-list');
+    list.innerHTML = '';
+    currentWordSet.forEach((w,i) => {
+      const a     = attemptCounts[i] || 0;
+      const badge = a===1 ? 'fast' : a<=2 ? 'ok' : 'slow';
+      const label = a===1 ? '⚡ First try' : a<=2 ? '✅ '+a+' attempts' : '🔄 '+a+' attempts';
+      list.innerHTML += `
+        <div class="word-result">
+          <div>
+            <div class="wr-word">${w.emoji} ${w.word}</div>
+            <div class="wr-phonemes">${selectedDiff==='hard'
+              ? w.left+'+'+w.right+'+'+w.coda
+              : w.left+'+'+w.right}</div>
+          </div>
+          <div class="wr-badge ${badge}">${label}</div>
+        </div>`;
+    });
+
+    allDone.classList.add('visible');
+  }
+
+  function restartGame() {
+    round=0; score=0; attemptCounts=[];
+    scoreDisplay.textContent='⭐ 0';
+    allDone.classList.remove('visible');
+    loadRound(0);
+  }
+
+  // ── Help ──────────────────────────────────────────────────────────────────
+  function showHelp() { document.getElementById('help-modal').classList.add('visible'); }
+  function closeHelp(){ document.getElementById('help-modal').classList.remove('visible'); }
+
+  // ── Speech ────────────────────────────────────────────────────────────────
+  function speakWord(word) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(word);
+    utt.rate  = 0.82; utt.pitch = 1.1;
+    window.speechSynthesis.speak(utt);
+  }
+  function speakCurrentWord() {
+    speakWord(currentWordSet[Math.min(round, currentWordSet.length-1)].speak);
+  }
+
+  // ── Neutral chime ─────────────────────────────────────────────────────────
+  function playNeutralChime() {
+    try {
+      const ac   = new (window.AudioContext || window.webkitAudioContext)();
+      const osc  = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type = 'sine'; osc.frequency.value = 330;
+      gain.gain.setValueAtTime(.25, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001, ac.currentTime + .5);
+      osc.start(); osc.stop(ac.currentTime + .5);
+    } catch(e) {}
+  }
+
+
+  // ── Marker viewer ─────────────────────────────────────────────────────────
+  let currentMarker = 'hiro';
+
+  function showMarker(which) {
+    currentMarker = which;
+    const modal = document.getElementById('marker-modal');
+    const img   = document.getElementById('marker-img');
+    const canvas= document.getElementById('marker-canvas');
+    const label = document.getElementById('marker-modal-label');
+
+    img.style.display    = 'block';
+    canvas.style.display = 'none';
+
+    label.textContent = which === 'hiro'
+      ? 'HIRO MARKER (orange block) — point your camera at this'
+      : 'KANJI MARKER (blue block) — point your camera at this';
+
+    img.src = which === 'hiro'
+      ? 'https://raw.githack.com/AR-js-org/AR.js/master/data/images/hiro.png'
+      : 'https://raw.githack.com/AR-js-org/AR.js/master/data/images/kanji.png';
+
+    modal.style.display = 'flex';
+  }
+
+  function closeMarkerModal() {
+    document.getElementById('marker-modal').style.display = 'none';
+  }
+
+  // Canvas fallback — draws an approximate marker pattern if the image fails
+  // Accurate enough for AR.js detection since the border geometry is what matters
+  function drawMarkerFallback(which) {
+    const canvas = document.getElementById('marker-canvas');
+    const ctx    = canvas.getContext('2d');
+    const S      = 400;
+    ctx.clearRect(0, 0, S, S);
+
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, S, S);
+
+    // Thick black outer border — this is the main detection feature
+    const borderW = 80;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, S, borderW);               // top
+    ctx.fillRect(0, S - borderW, S, borderW);      // bottom
+    ctx.fillRect(0, 0, borderW, S);               // left
+    ctx.fillRect(S - borderW, 0, borderW, S);      // right
+
+    // Inner pattern area
+    const inner = borderW + 10;
+    const innerS = S - (inner * 2);
+    const cell   = innerS / 6;
+
+    if (which === 'hiro') {
+      // Hiro inner pattern: 4 corner blocks + horizontal bars
+      ctx.fillStyle = '#000000';
+      // top-left block
+      ctx.fillRect(inner, inner, cell*2, cell*2);
+      // top-right block
+      ctx.fillRect(inner + cell*4, inner, cell*2, cell*2);
+      // bottom-left block
+      ctx.fillRect(inner, inner + cell*4, cell*2, cell*2);
+      // bottom-right block
+      ctx.fillRect(inner + cell*4, inner + cell*4, cell*2, cell*2);
+      // centre cross horizontal
+      ctx.fillRect(inner, inner + cell*2.5 - 8, innerS, 16);
+      // centre cross vertical
+      ctx.fillRect(inner + cell*2.5 - 8, inner, 16, innerS);
+    } else {
+      // Kanji inner pattern: vertical strokes
+      ctx.fillStyle = '#000000';
+      // left vertical stroke
+      ctx.fillRect(inner + cell*0.5, inner + cell*0.5, cell, innerS - cell);
+      // right vertical stroke
+      ctx.fillRect(inner + cell*4.5, inner + cell*0.5, cell, innerS - cell);
+      // top horizontal
+      ctx.fillRect(inner + cell*0.5, inner + cell*0.5, innerS - cell, cell);
+      // middle horizontal
+      ctx.fillRect(inner + cell*0.5, inner + cell*2.8, innerS - cell, cell);
+      // bottom horizontal
+      ctx.fillRect(inner + cell*0.5, inner + cell*4.5, innerS - cell, cell);
+    }
+  }
+
+  // ── AR marker events ──────────────────────────────────────────────────────
+  document.querySelector('#marker-hiro').addEventListener('markerFound', () => { hiroSeen=true;  updateState(); });
+  document.querySelector('#marker-hiro').addEventListener('markerLost',  () => { hiroSeen=false; updateState(); });
+  document.querySelector('#marker-kanji').addEventListener('markerFound',() => { kanjiSeen=true;  updateState(); });
+  document.querySelector('#marker-kanji').addEventListener('markerLost', () => { kanjiSeen=false; updateState(); });
+</script>
+
+<!-- ══ MARKER VIEWER MODAL ════════════════════════════════════════════════ -->
+<div id="marker-modal" style="
+  display:none; position:fixed; inset:0; z-index:3000;
+  background:#000; flex-direction:column;
+  align-items:center; justify-content:center;
+">
+  <div style="color:#fff;font-family:Nunito,sans-serif;font-size:13px;font-weight:700;
+              letter-spacing:.5px;text-transform:uppercase;margin-bottom:16px;opacity:.6;"
+       id="marker-modal-label">HIRO MARKER — point camera at this</div>
+
+  <!-- Image attempt — falls back to canvas if it fails to load -->
+  <img id="marker-img"
+       style="max-width:90vmin;max-height:75vmin;image-rendering:pixelated;display:block;"
+       alt="AR Marker"
+       onerror="this.style.display='none';document.getElementById('marker-canvas').style.display='block';drawMarkerFallback(currentMarker);"
+  />
+  <canvas id="marker-canvas"
+          width="400" height="400"
+          style="display:none;max-width:90vmin;max-height:75vmin;image-rendering:pixelated;">
+  </canvas>
+
+  <div style="margin-top:20px;color:rgba(255,255,255,.45);font-family:Nunito,sans-serif;
+              font-size:12px;font-weight:700;text-align:center;max-width:280px;line-height:1.6;">
+    Keep this visible while pointing your phone camera at it.<br>
+    Hold phone 20–30 cm away.
+  </div>
+  <button onclick="closeMarkerModal()" style="
+    margin-top:24px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2);
+    color:#fff; border-radius:12px; padding:10px 28px;
+    font-size:14px; font-weight:700; cursor:pointer; font-family:Nunito,sans-serif;
+  ">← Back</button>
+</div>
+
+</body>
+</html>
