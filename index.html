@@ -214,7 +214,7 @@
       min-width:min(200px,70vw); max-width:min(280px,82vw); z-index:999; pointer-events:none;
     }
     #word-popup.visible     { transform:translateX(-50%) scale(1); }
-    #word-popup.wrong-popup { background:#fef2f2; border-color:#ef4444; transform:translateX(-50%) scale(1) animation:popupShake .4s ease; }
+    #word-popup.wrong-popup { background:#fef2f2; border-color:#ef4444; transform:translateX(-50%) scale(1); animation:popupShake .4s ease; }
     @keyframes popupShake {
       0%,100%{ transform:translateX(-50%) scale(1) rotate(0deg); }
       25%    { transform:translateX(-50%) scale(1) rotate(-2deg); }
@@ -354,14 +354,14 @@
   vr-mode-ui="enabled:false"
   style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;"
 >
-  <a-marker type="pattern" url="pattern-C.patt" id="marker-left" emitevents="true">
+  <a-marker type="pattern" url="pattern-c.patt" id="marker-left" emitevents="true">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#f97316" opacity="0.93"></a-box>
     <a-text id="text-left" value="SH" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
             font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
   </a-marker>
 
-  <a-marker type="pattern" url="pattern-V.patt" id="marker-right" emitevents="true">
+  <a-marker type="pattern" url="pattern-v.patt" id="marker-right" emitevents="true">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#3b82f6" opacity="0.93"></a-box>
     <a-text id="text-right" value="EE" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
@@ -888,10 +888,10 @@
 
     if (side === 'left') {
       label.textContent = 'MARKER 1 — Consonant Block (C)';
-      imgEl.src = 'pattern-C.png'; // Loads from folder
+      imgEl.src = 'pattern-c.png'; // Exact lowercase match
     } else {
       label.textContent = 'MARKER 2 — Vowel Block (V)';
-      imgEl.src = 'pattern-V.png'; // Loads from folder
+      imgEl.src = 'pattern-v.png'; // Exact lowercase match
     }
 
     modal.style.display = 'flex';
