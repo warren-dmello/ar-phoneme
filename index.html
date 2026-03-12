@@ -20,6 +20,32 @@
     * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html, body { height:100%; font-family:'Nunito',sans-serif; background:#000; overflow:hidden; }
 
+    /* ── AR.js camera feed fix ──────────────────────────────────────────
+       AR.js injects a <video> and A-Frame renders a <canvas>.
+       Both must be fixed, full-screen, z-index 0 so they show behind UI.
+       Without this the canvas covers the video or both are hidden.       */
+    #arjs-video,
+    video[autoplay],
+    .a-canvas,
+    canvas.a-canvas,
+    a-scene canvas {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 0 !important;
+      object-fit: cover !important;
+      display: block !important;
+    }
+    a-scene {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 0 !important;
+    }
+
     /* ══════════════════════════════════════════
        WELCOME SCREEN
     ══════════════════════════════════════════ */
@@ -337,6 +363,7 @@
   arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono_and_matrix; matrixCodeType:3x3;"
   renderer="logarithmicDepthBuffer:true; antialias:true;"
   vr-mode-ui="enabled:false"
+  style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;"
 >
   <!-- Marker 1: Hiro preset (consonant — orange) -->
   <a-marker preset="hiro" id="marker-hiro">
