@@ -214,7 +214,7 @@
       min-width:min(200px,70vw); max-width:min(280px,82vw); z-index:999; pointer-events:none;
     }
     #word-popup.visible     { transform:translateX(-50%) scale(1); }
-    #word-popup.wrong-popup { background:#fef2f2; border-color:#ef4444; transform:translateX(-50%) scale(1); animation:popupShake .4s ease; }
+    #word-popup.wrong-popup { background:#fef2f2; border-color:#ef4444; transform:translateX(-50%) scale(1) animation:popupShake .4s ease; }
     @keyframes popupShake {
       0%,100%{ transform:translateX(-50%) scale(1) rotate(0deg); }
       25%    { transform:translateX(-50%) scale(1) rotate(-2deg); }
@@ -354,16 +354,16 @@
   vr-mode-ui="enabled:false"
   style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;"
 >
-  <a-marker preset="hiro" id="marker-hiro" emitevents="true">
+  <a-marker type="pattern" url="pattern-C.patt" id="marker-left" emitevents="true">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#f97316" opacity="0.93"></a-box>
-    <a-text id="text-hiro" value="SH" align="center" position="0 1.25 0"
+    <a-text id="text-left" value="SH" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
             font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
   </a-marker>
 
-  <a-marker preset="kanji" id="marker-kanji" emitevents="true">
+  <a-marker type="pattern" url="pattern-V.patt" id="marker-right" emitevents="true">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#3b82f6" opacity="0.93"></a-box>
-    <a-text id="text-kanji" value="EE" align="center" position="0 1.25 0"
+    <a-text id="text-right" value="EE" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
             font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
   </a-marker>
@@ -417,12 +417,12 @@
   <div class="section-label">Your Markers</div>
   <div class="marker-preview">
     <div class="marker-card">
-      <div class="mc-label">Marker 1 — Hiro</div>
+      <div class="mc-label">Marker 1 — Consonant (C)</div>
       <div class="mc-pill consonant">SH</div>
       <div class="mc-name">Consonant block<br>Orange in AR</div>
     </div>
     <div class="marker-card">
-      <div class="mc-label">Marker 2 — Kanji</div>
+      <div class="mc-label">Marker 2 — Vowel (V)</div>
       <div class="mc-pill vowel">EE</div>
       <div class="mc-name">Vowel block<br>Blue in AR</div>
     </div>
@@ -431,9 +431,9 @@
   <button class="start-btn" onclick="startGame()">Start Session →</button>
   <div class="print-note">
     View your markers fullscreen:<br>
-    <a onclick="showMarker('hiro')">Marker 1 — Hiro (consonant)</a>
+    <a onclick="showMarker('left')">Marker 1 — Consonant (C)</a>
     <br>
-    <a onclick="showMarker('kanji')">Marker 2 — Kanji (vowel)</a>
+    <a onclick="showMarker('right')">Marker 2 — Vowel (V)</a>
   </div>
 </div>
 
@@ -611,8 +611,8 @@
   const scoreDisplay = document.getElementById('score-display');
   const rcOverlay    = document.getElementById('round-complete');
   const allDone      = document.getElementById('all-done');
-  const textHiro     = document.getElementById('text-hiro');
-  const textKanji    = document.getElementById('text-kanji');
+  const textLeft     = document.getElementById('text-left');
+  const textRight    = document.getElementById('text-right');
   const wrongMsg     = document.getElementById('wrong-msg');
 
   // ── Difficulty ────────────────────────────────────────────────────────────
@@ -669,8 +669,8 @@
     roundDone=false; hiroSeen=false; kanjiSeen=false;
     wordShowing=false; currentAttempts=0; wrongCooldown=false;
 
-    textHiro.setAttribute('value',  w.left);
-    textKanji.setAttribute('value', w.right);
+    textLeft.setAttribute('value',  w.left);
+    textRight.setAttribute('value', w.right);
 
     pillLeft.textContent  = w.left;
     pillRight.textContent = w.right;
@@ -880,18 +880,18 @@
     speakWord(currentWordSet[Math.min(round,currentWordSet.length-1)].speak, 0.82);
   }
 
-  // ── FIX: Stable Image Hosting URLs ─────────────
-  function showMarker(type) {
+  // ── Custom Marker Viewer ─────────────
+  function showMarker(side) {
     const modal = document.getElementById('marker-modal');
     const label = document.getElementById('marker-modal-label');
     const imgEl = document.getElementById('marker-img');
 
-    if (type === 'hiro') {
-      label.textContent = 'MARKER 1 — HIRO (consonant / orange block)';
-      imgEl.src = 'https://jeromeetienne.github.io/AR.js/data/images/hiro.png';
+    if (side === 'left') {
+      label.textContent = 'MARKER 1 — Consonant Block (C)';
+      imgEl.src = 'pattern-C.png'; // Loads from folder
     } else {
-      label.textContent = 'MARKER 2 — KANJI (vowel / blue block)';
-      imgEl.src = 'https://jeromeetienne.github.io/AR.js/data/images/kanji.png';
+      label.textContent = 'MARKER 2 — Vowel Block (V)';
+      imgEl.src = 'pattern-V.png'; // Loads from folder
     }
 
     modal.style.display = 'flex';
@@ -902,10 +902,10 @@
   }
 
   // ── AR marker events ──────────────────────────────────────────────────────
-  document.querySelector('#marker-hiro').addEventListener('markerFound',  ()=>{ hiroSeen=true;  updateState(); });
-  document.querySelector('#marker-hiro').addEventListener('markerLost',   ()=>{ hiroSeen=false; updateState(); });
-  document.querySelector('#marker-kanji').addEventListener('markerFound', ()=>{ kanjiSeen=true;  updateState(); });
-  document.querySelector('#marker-kanji').addEventListener('markerLost',  ()=>{ kanjiSeen=false; updateState(); });
+  document.querySelector('#marker-left').addEventListener('markerFound',  ()=>{ hiroSeen=true;  updateState(); });
+  document.querySelector('#marker-left').addEventListener('markerLost',   ()=>{ hiroSeen=false; updateState(); });
+  document.querySelector('#marker-right').addEventListener('markerFound', ()=>{ kanjiSeen=true;  updateState(); });
+  document.querySelector('#marker-right').addEventListener('markerLost',  ()=>{ kanjiSeen=false; updateState(); });
 </script>
 </body>
 </html>
