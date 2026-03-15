@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet"/>
   
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
   <style>
@@ -349,25 +349,22 @@
 
 <a-scene
   embedded
-  arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono_and_matrix; matrixCodeType:3x3;"
+  arjs="sourceType:webcam; debugUIEnabled:false; detectionMode:mono; patternRatio:0.75; smooth:true; smoothCount:10; smoothTolerance:0.01; smoothThreshold:5;"
   renderer="logarithmicDepthBuffer:true; antialias:true;"
   vr-mode-ui="enabled:false"
   style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;"
 >
-  <!-- Marker 1: Hiro preset — consonant block (orange)
-       Built into AR.js — no external file needed. This is the marker
-       with the cross/grid pattern. Print or display hiro.png. -->
-  <a-marker preset="hiro" id="marker-left" emitevents="true">
+  <!-- Hiro and Kanji are pattern markers built into AR.js 3.4.5.
+       detectionMode:mono is correct for pattern-only detection.
+       No external .patt files needed. -->
+  <a-marker preset="hiro" id="marker-left" emitevents="true" smooth="true" smoothCount="10" smoothTolerance="0.01">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#f97316" opacity="0.93"></a-box>
     <a-text id="text-left" value="SH" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
             font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"></a-text>
   </a-marker>
 
-  <!-- Marker 2: Kanji preset — vowel block (blue)
-       Also built into AR.js — no external file needed. This is the marker
-       with the kanji character pattern. Print or display kanji.png. -->
-  <a-marker preset="kanji" id="marker-right" emitevents="true">
+  <a-marker preset="kanji" id="marker-right" emitevents="true" smooth="true" smoothCount="10" smoothTolerance="0.01">
     <a-box position="0 0.5 0" scale="1.2 1 1.2" color="#3b82f6" opacity="0.93"></a-box>
     <a-text id="text-right" value="EE" align="center" position="0 1.25 0"
             scale="3 3 3" color="white"
@@ -886,9 +883,7 @@
     speakWord(currentWordSet[Math.min(round,currentWordSet.length-1)].speak, 0.82);
   }
 
-  // ── Marker Viewer — draws both preset markers on canvas ──────────────────
-  // Both hiro and kanji patterns are drawn mathematically so there is zero
-  // dependency on any external image file or CDN.
+  // ── Marker Viewer — canvas-drawn, zero external dependencies ─────────────
   function showMarker(side) {
     const modal  = document.getElementById('marker-modal');
     const label  = document.getElementById('marker-modal-label');
@@ -908,55 +903,127 @@
     document.getElementById('marker-modal').style.display = 'none';
   }
 
-  // Draws the Hiro preset marker onto an <img> element via an offscreen canvas.
   function drawHiroOnImg(imgEl) {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    const S = 400, pad = 20, ms = S - pad * 2, bw = Math.round(ms * 0.18);
-
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, S, S);
-    ctx.fillStyle = '#000000'; ctx.fillRect(pad, pad, ms, ms);
-    const ix = pad + bw, iy = pad + bw, iw = ms - bw * 2;
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(ix, iy, iw, iw);
-    ctx.fillStyle = '#000000';
-    const c = iw / 6;
-    ctx.fillRect(ix,           iy,           c * 2, c * 2);
-    ctx.fillRect(ix + c * 4,   iy,           c * 2, c * 2);
-    ctx.fillRect(ix,           iy + c * 4,   c * 2, c * 2);
-    ctx.fillRect(ix + c * 4,   iy + c * 4,   c * 2, c * 2);
-    ctx.fillRect(ix + c,       iy + c * 2.5 - c * 0.15, c * 4, c * 0.3);
-    ctx.fillRect(ix + c * 2.5 - c * 0.15, iy + c, c * 0.3, c * 4);
-    imgEl.src = canvas.toDataURL('image/png');
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 400;
+    const ctx = cv.getContext('2d');
+    const S=400, pad=20, ms=S-pad*2, bw=Math.round(ms*0.18);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,S,S);
+    ctx.fillStyle='#000'; ctx.fillRect(pad,pad,ms,ms);
+    const ix=pad+bw, iy=pad+bw, iw=ms-bw*2;
+    ctx.fillStyle='#fff'; ctx.fillRect(ix,iy,iw,iw);
+    ctx.fillStyle='#000';
+    const c=iw/6;
+    ctx.fillRect(ix,        iy,        c*2, c*2);
+    ctx.fillRect(ix+c*4,    iy,        c*2, c*2);
+    ctx.fillRect(ix,        iy+c*4,    c*2, c*2);
+    ctx.fillRect(ix+c*4,    iy+c*4,    c*2, c*2);
+    ctx.fillRect(ix+c,      iy+c*2.5-c*0.15, c*4, c*0.3);
+    ctx.fillRect(ix+c*2.5-c*0.15, iy+c, c*0.3, c*4);
+    imgEl.src = cv.toDataURL('image/png');
   }
 
-  // Draws the Kanji preset marker onto an <img> element via an offscreen canvas.
   function drawKanjiOnImg(imgEl) {
-    const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    const S = 400, pad = 20, ms = S - pad * 2, bw = Math.round(ms * 0.18);
-
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, S, S);
-    ctx.fillStyle = '#000000'; ctx.fillRect(pad, pad, ms, ms);
-    const ix = pad + bw, iy = pad + bw, iw = ms - bw * 2;
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(ix, iy, iw, iw);
-    ctx.fillStyle = '#000000';
-    const c = iw / 6;
-    // Kanji inner pattern: two vertical strokes + three horizontal bars
-    ctx.fillRect(ix + c * 0.8, iy + c * 0.5, c * 0.8, iw - c);         // left vertical
-    ctx.fillRect(ix + c * 4.4, iy + c * 0.5, c * 0.8, iw - c);         // right vertical
-    ctx.fillRect(ix + c * 0.5, iy + c * 0.5, iw - c, c * 0.8);         // top horizontal
-    ctx.fillRect(ix + c * 0.5, iy + c * 2.6, iw - c, c * 0.8);         // middle horizontal
-    ctx.fillRect(ix + c * 0.5, iy + c * 4.7, iw - c, c * 0.8);         // bottom horizontal
-    imgEl.src = canvas.toDataURL('image/png');
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 400;
+    const ctx = cv.getContext('2d');
+    const S=400, pad=20, ms=S-pad*2, bw=Math.round(ms*0.18);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,S,S);
+    ctx.fillStyle='#000'; ctx.fillRect(pad,pad,ms,ms);
+    const ix=pad+bw, iy=pad+bw, iw=ms-bw*2;
+    ctx.fillStyle='#fff'; ctx.fillRect(ix,iy,iw,iw);
+    ctx.fillStyle='#000';
+    const c=iw/6;
+    ctx.fillRect(ix+c*0.8, iy+c*0.5, c*0.8, iw-c);
+    ctx.fillRect(ix+c*4.4, iy+c*0.5, c*0.8, iw-c);
+    ctx.fillRect(ix+c*0.5, iy+c*0.5, iw-c,  c*0.8);
+    ctx.fillRect(ix+c*0.5, iy+c*2.6, iw-c,  c*0.8);
+    ctx.fillRect(ix+c*0.5, iy+c*4.7, iw-c,  c*0.8);
+    imgEl.src = cv.toDataURL('image/png');
   }
 
-  // ── AR marker events ──────────────────────────────────────────────────────
-  document.querySelector('#marker-left').addEventListener('markerFound',  ()=>{ hiroSeen=true;  updateState(); });
-  document.querySelector('#marker-left').addEventListener('markerLost',   ()=>{ hiroSeen=false; updateState(); });
-  document.querySelector('#marker-right').addEventListener('markerFound', ()=>{ kanjiSeen=true;  updateState(); });
-  document.querySelector('#marker-right').addEventListener('markerLost',  ()=>{ kanjiSeen=false; updateState(); });
+  // ── AR marker events — attached inside 'loaded' so scene is fully ready ───
+  // Attaching before scene loaded can mean the marker entities don't yet exist
+  // in the AR.js component system even if they're in the DOM.
+  document.querySelector('a-scene').addEventListener('loaded', function () {
+    const markerLeft  = document.querySelector('#marker-left');
+    const markerRight = document.querySelector('#marker-right');
+
+    markerLeft.addEventListener('markerFound', () => {
+      hiroSeen = true;
+      setDebug('left', true);
+      updateState();
+    });
+    markerLeft.addEventListener('markerLost', () => {
+      hiroSeen = false;
+      setDebug('left', false);
+      updateState();
+    });
+    markerRight.addEventListener('markerFound', () => {
+      kanjiSeen = true;
+      setDebug('right', true);
+      updateState();
+    });
+    markerRight.addEventListener('markerLost', () => {
+      kanjiSeen = false;
+      setDebug('right', false);
+      updateState();
+    });
+
+    // Confirm AR.js is live
+    setDebugReady(true);
+  });
+
+  // ── Debug indicator — shows raw detection state independent of game logic ─
+  // Small pill in bottom-right corner. Green = marker detected. Grey = not seen.
+  // Tapping it manually fires markerFound for testing without a physical marker.
+  let debugVisible = false;
+
+  function setDebugReady(ready) {
+    const el = document.getElementById('debug-bar');
+    if (!el) return;
+    if (ready) {
+      el.style.display = 'flex';
+      el.querySelector('#dbg-status').textContent = 'AR Ready — show a marker';
+    }
+  }
+
+  function setDebug(side, found) {
+    const pill = document.getElementById('dbg-' + side);
+    if (!pill) return;
+    pill.style.background = found ? '#4ade80' : '#cbd5e1';
+    pill.style.color      = found ? '#14532d' : '#64748b';
+    const label = document.getElementById('dbg-status');
+    if (hiroSeen && kanjiSeen) label.textContent = '✅ Both detected!';
+    else if (hiroSeen)         label.textContent = 'Hiro ✓ — show Kanji';
+    else if (kanjiSeen)        label.textContent = 'Kanji ✓ — show Hiro';
+    else                       label.textContent = 'AR Ready — show a marker';
+  }
 </script>
+<!-- Debug bar — shows raw AR detection state. Hidden until AR scene loads. -->
+<div id="debug-bar" style="
+  display:none; position:fixed; bottom:clamp(70px,18vw,90px); right:12px;
+  z-index:1000; flex-direction:column; align-items:flex-end; gap:6px;
+  pointer-events:none;
+">
+  <div style="
+    background:rgba(255,255,255,0.95); border:2px solid #e2e8f0; border-radius:12px;
+    padding:6px 12px; font-family:'Nunito',sans-serif; font-size:11px; font-weight:900;
+    color:#64748b; letter-spacing:.3px; white-space:nowrap;
+  " id="dbg-status">Initialising AR…</div>
+  <div style="display:flex; gap:6px;">
+    <div id="dbg-left" style="
+      background:#cbd5e1; color:#64748b; border-radius:10px;
+      padding:4px 10px; font-family:'Nunito',sans-serif;
+      font-size:11px; font-weight:900; transition:all .2s;
+    ">HIRO</div>
+    <div id="dbg-right" style="
+      background:#cbd5e1; color:#64748b; border-radius:10px;
+      padding:4px 10px; font-family:'Nunito',sans-serif;
+      font-size:11px; font-weight:900; transition:all .2s;
+    ">KANJI</div>
+  </div>
+</div>
+
 </body>
 </html>
