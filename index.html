@@ -6,8 +6,8 @@
   <title>AR Phoneme Builder</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet"/>
   
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.5/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.2.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ar-js-org/ar.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   
   <style>
@@ -939,26 +939,31 @@
   }
 
   // ── AR marker events ──────────────────────────────────────────────────────
-  // Attach directly — DOM elements exist at this point since script is at
-  // end of body. Also attach inside loaded as a fallback.
-  function attachMarkerEvents() {
-    const ml = document.querySelector('#marker-left');
-    const mr = document.querySelector('#marker-right');
-    if (!ml || !mr) return;
-    ml.addEventListener('markerFound',  () => { hiroSeen=true;  setDebug('left',true);  updateState(); });
-    ml.addEventListener('markerLost',   () => { hiroSeen=false; setDebug('left',false); updateState(); });
-    mr.addEventListener('markerFound',  () => { kanjiSeen=true;  setDebug('right',true);  updateState(); });
-    mr.addEventListener('markerLost',   () => { kanjiSeen=false; setDebug('right',false); updateState(); });
-  }
-
-  // Attach immediately (works in most browsers)
-  attachMarkerEvents();
-
-  // Also attach on scene loaded as a safety net
-  document.querySelector('a-scene').addEventListener('loaded', () => {
-    attachMarkerEvents();
+  // Attach inside scene loaded — same pattern as the minimal test.html.
+  document.querySelector('a-scene').addEventListener('loaded', function() {
     document.getElementById('debug-bar').style.display = 'flex';
     document.getElementById('dbg-status').textContent  = 'AR ready — show a marker';
+
+    document.getElementById('marker-left').addEventListener('markerFound', function() {
+      hiroSeen = true;
+      setDebug('left', true);
+      updateState();
+    });
+    document.getElementById('marker-left').addEventListener('markerLost', function() {
+      hiroSeen = false;
+      setDebug('left', false);
+      updateState();
+    });
+    document.getElementById('marker-right').addEventListener('markerFound', function() {
+      kanjiSeen = true;
+      setDebug('right', true);
+      updateState();
+    });
+    document.getElementById('marker-right').addEventListener('markerLost', function() {
+      kanjiSeen = false;
+      setDebug('right', false);
+      updateState();
+    });
   });
 
 </script>
