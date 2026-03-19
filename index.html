@@ -343,15 +343,55 @@
       font-family:'Nunito',sans-serif; box-shadow: 0 4px 0 #cbd5e1; transition:all .1s;
     }
     .marker-modal-back:active { transform:translateY(4px); box-shadow: 0 0 0 #cbd5e1; }
-  </style>
+</style>
 </head>
 <body>
+
+<!-- Register ar-detector BEFORE a-scene so A-Frame can find it on parse -->
+<script>
+  AFRAME.registerComponent('ar-detector', {
+    init: function () {
+      this.leftEl   = null;
+      this.rightEl  = null;
+      this.leftWas  = false;
+      this.rightWas = false;
+      var self = this;
+      // Grab marker elements after scene is ready
+      this.el.sceneEl.addEventListener('loaded', function () {
+        self.leftEl  = document.getElementById('marker-left');
+        self.rightEl = document.getElementById('marker-right');
+        document.getElementById('debug-bar').style.display = 'flex';
+        document.getElementById('dbg-status').textContent  = 'AR ready — show a marker';
+      });
+    },
+    tick: function () {
+      if (!this.leftEl || !this.rightEl) return;
+
+      var leftNow  = !!(this.leftEl.object3D  && this.leftEl.object3D.visible);
+      var rightNow = !!(this.rightEl.object3D && this.rightEl.object3D.visible);
+
+      if (leftNow !== this.leftWas) {
+        this.leftWas = leftNow;
+        hiroSeen = leftNow;
+        setDebug('left', leftNow);
+        updateState();
+      }
+      if (rightNow !== this.rightWas) {
+        this.rightWas = rightNow;
+        kanjiSeen = rightNow;
+        setDebug('right', rightNow);
+        updateState();
+      }
+    }
+  });
+</script>
 
 <a-scene
   embedded
   arjs="sourceType:webcam; debugUIEnabled:false;"
   renderer="logarithmicDepthBuffer:true; antialias:true;"
   vr-mode-ui="enabled:false"
+  ar-detector
   style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;"
 >
   <a-marker preset="hiro" id="marker-left" emitevents="true">
@@ -938,33 +978,6 @@
     imgEl.src = cv.toDataURL('image/png');
   }
 
-  // ── AR marker events ──────────────────────────────────────────────────────
-  // Attach inside scene loaded — same pattern as the minimal test.html.
-  document.querySelector('a-scene').addEventListener('loaded', function() {
-    document.getElementById('debug-bar').style.display = 'flex';
-    document.getElementById('dbg-status').textContent  = 'AR ready — show a marker';
-
-    document.getElementById('marker-left').addEventListener('markerFound', function() {
-      hiroSeen = true;
-      setDebug('left', true);
-      updateState();
-    });
-    document.getElementById('marker-left').addEventListener('markerLost', function() {
-      hiroSeen = false;
-      setDebug('left', false);
-      updateState();
-    });
-    document.getElementById('marker-right').addEventListener('markerFound', function() {
-      kanjiSeen = true;
-      setDebug('right', true);
-      updateState();
-    });
-    document.getElementById('marker-right').addEventListener('markerLost', function() {
-      kanjiSeen = false;
-      setDebug('right', false);
-      updateState();
-    });
-  });
 
 </script>
 </body>
